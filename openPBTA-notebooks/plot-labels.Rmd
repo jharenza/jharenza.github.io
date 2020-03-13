@@ -64,4 +64,4 @@ as.data.frame(table(clin$label))
 - The 833 remaining NAs are the normal specimens.
 - The CNS EFT-CIC will become CNS Ewings sarcoma.
 - We have a standalone BRAF V600E subtype, but this is HGG only, and should be labeled as such.
-- We probably want to label LGAT as BRAF fusion, BRAF V600E, or LGG BRAF WT.
+- We probably want to label LGAT as LFF BRAF fusion, LGG BRAF V600E, or LGG BRAF WT.
