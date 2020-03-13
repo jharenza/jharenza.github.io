@@ -1,0 +1,67 @@
+---
+title: "Add plot labels to pbta-histologies.tsv file"
+output: html_notebook    
+toc: TRUE
+toc_float: TRUE
+editor_options: 
+  chunk_output_type: inline
+---
+
+## Read in clinical data.
+
+```{r}
+clin <- read.delim("~/OpenPBTA-analysis/data/release-v15-20200228/pbta-histologies.tsv", header = T, sep = "\t")
+```
+
+## Add medulloblastoma labels.
+
+```{r}
+##If MB samples were not subtyped, retain only integrated diagnosis. If subtyped, concat with subtype
+clin$label <- ifelse(clin$integrated_diagnosis == "Medulloblastoma" & !is.na(clin$molecular_subtype),
+                       paste0(clin$integrated_diagnosis, "-", clin$molecular_subtype), 
+                     ifelse(clin$integrated_diagnosis == "Medulloblastoma" & is.na(clin$molecular_subtype),
+                            paste0(clin$integrated_diagnosis), paste0(clin$molecular_subtype)))
+##check labels
+as.data.frame(table(clin$label))
+```
+
+## Add ATRT labels.
+
+```{r}
+##Since ATRT has a broad_histology == Embryonal Tumor, we should specify the disease type in the label
+clin$label <- unlist(ifelse(clin$short_histology == "ATRT", 
+                            paste0(clin$short_histology), paste0(clin$label)))
+##check labels
+as.data.frame(table(clin$label))
+```
+
+## For "Other" tumors, use integrated diagnosis.
+This results in a lot of histologies of small N - discuss what we would like to see here.
+
+```{r}
+clin$label <- unlist(ifelse(clin$short_histology == "Other", 
+                            paste0(clin$integrated_diagnosis), paste0(clin$label)))
+##check labels
+as.data.frame(table(clin$label))
+```
+
+## Fix NAs - some NAs are converted to factors when the above is done (there may be a way to stop this during ifelse, but couldn't quickly find).
+
+```{r}
+clin$label <- ifelse(clin$label == "NA", NA, paste0(clin$label))
+```
+
+## For remaining samples, use broad_histology for missing labels.
+
+```{r}
+clin$label <- ifelse(is.na(clin$label), 
+                     paste0(clin$short_histology), paste0(clin$label))
+## Check all labels
+as.data.frame(table(clin$label))
+```
+
+## A few notes:
+- The 833 remaining NAs are the normal specimens.
+- The CNS EFT-CIC will become CNS Ewings sarcoma.
+- We have a standalone BRAF V600E subtype, but this is HGG only, and should be labeled as such.
+- We probably want to label LGAT as BRAF fusion, BRAF V600E, or LGG BRAF WT.
