@@ -6,7 +6,6 @@ toc_float: TRUE
 editor_options: 
   chunk_output_type: inline
 ---
-# R chunk options
 ```{r global_options, include=F}
 knitr::opts_chunk$set(error = F, echo = T, warning = T, message = T)
 ```
@@ -14,11 +13,11 @@ knitr::opts_chunk$set(error = F, echo = T, warning = T, message = T)
 
 # Load packages
 ```{r}
-library(dplyr)
-library(umap)
-library(ggplot2)
-library(devtools)
-library(gdata)
+suppressMessages(library(dplyr))
+suppressMessages(library(umap))
+suppressMessages(library(ggplot2))
+suppressMessages(library(devtools))
+suppressMessages(library(gdata))
 ```
 
 # Directories and Files
@@ -41,7 +40,7 @@ pbta_rnaseq_file_full <- file.path(pbta_data_dir, "pbta-gene-expression-rsem-fpk
 pbta_hist_file <- file.path(pbta_data_dir, "pbta-histologies.tsv")
 pptc_annot_file <- file.path(data_dir, "pptc_annot.tsv")
 pptc_hist_file <- file.path(data_dir, "pptc-pdx-clinical-web.txt")
-mm2s_file <- file.path(data_dir, "rathi_results.tsv")
+classifier_path_file <- file.path(data_dir, "rathi_results.tsv")
 ```
 ## Read in files
 ```{r}
@@ -66,7 +65,7 @@ head(mt_annot)
 
 # MM2S PBTA classifier results, MB classifier results, pathology data
 # MM2S Paper: https://scfbm.biomedcentral.com/articles/10.1186/s13029-016-0053-y
-pbta_combined_subtypes <- read.delim(mm2s_file, sep = "\t", header = T)
+pbta_combined_subtypes <- read.delim(classifier_path_file, sep = "\t", header = T)
 # How many of each subtype identified by pathology?
 table(pbta_combined_subtypes$pathology_subtype)
 ```
@@ -237,7 +236,7 @@ subtypes_calc$mbclass_v_path <- ifelse(subtypes_calc$pathology_subtype == subtyp
 # How many were predicted correctly (true)?
 table(subtypes_calc$mbclass_v_path)
 # Percent of classifications that match MB classifier calls
-(19/(13+19))*100
+(26/(6+26))*100
 # Create column to calculate matches for MM2S classifier
 subtypes_calc$MM2S_v_path <- ifelse(subtypes_calc$pathology_subtype == subtypes_calc$MM2S_prediction, "true", 
                                        ifelse(subtypes_calc$pathology_subtype == "Group 3 or 4" & subtypes_calc$MM2S_prediction == "Group3", "true", 
@@ -259,7 +258,7 @@ umap_plot_df <- data.frame(umap_results$layout) %>%
   tibble::rownames_to_column("Kids_First_Biospecimen_ID") %>%
   inner_join(pbta_combined_subtypes)
 ```  
-## Does this data look better? (Yes)
+## Does this data look better?
 ```{r}
 umap_plot_df %>%
   ggplot(aes(x = X1, 
@@ -299,9 +298,31 @@ umap_plot_df %>%
 ## Observation:
 - It looks like there are too few WNT samples (N = 3) to enable unsupervised clustering of those samples in this dataset.
 
+# Rerun of OpenPBTA stranded RNA-Seq (N = 121) UMAP clustering
+- Turns out the initial FPKM values were not log2 transformed, thus MB subtypes in pbta-histologies.tsv from MB classifier are not accurate.
+```{r}
+# Replot UMAP with new subtype labels
+gene_variance <- matrixStats::rowVars(pbta_coll_log2)
+variance_threshold <- quantile(gene_variance, 0.95, na.rm = T)
+high_variance_index <- which(gene_variance > variance_threshold)
+umap_results <- umap::umap(t(pbta_coll_log2[high_variance_index, ]))
+# Make a data frame of the layout results and join with molecular subtype 
+umap_plot_df <- data.frame(umap_results$layout) %>%
+  tibble::rownames_to_column("Kids_First_Biospecimen_ID") %>%
+  inner_join(pbta_combined_subtypes)
+# Plot by subtype
+umap_plot_df %>%
+  ggplot(aes(x = X1, 
+             y = X2,
+             color = mb_classifier_prediction)) +
+  geom_point(size = 3, alpha = 0.7) +
+  theme_bw() +
+  xlab("UMAP1") +
+  ylab("UMAP2")
+```
+-  This looks A LOT better!
 
 # session info
 ```{r}
 session_info()
 ```
-
