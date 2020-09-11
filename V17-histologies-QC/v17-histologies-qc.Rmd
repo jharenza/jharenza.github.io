@@ -133,7 +133,7 @@ sum(as.data.frame(table(v17_hist$molecular_subtype))$Freq)
 #### 33
 ```{r}
 setdiff(v17_hist[,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "cohort")], v16_hist[,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "cohort")])
-#A dd to df
+# Add to df
 path_diff <- as.data.frame(setdiff(v17_hist[,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "cohort")], v16_hist[,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "cohort")]))
 # How many per cohort?
 table(path_diff$cohort)
