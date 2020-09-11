@@ -86,7 +86,7 @@ as.data.frame(table(v17_hist$RNA_library))
 as.data.frame(table(v16_hist$cohort))
 as.data.frame(table(v17_hist$cohort))
 ```
-#### Sample and aliquot IDs `r emo::ji("x")` - PNOC003 `BS_MVYA262V` sample `7316-3213` was changed from `A05265` to `A05233`. Is this correct? `r emo::ji("exclamation")`
+#### Sample and aliquot IDs `r emo::ji("x")` - Aliquot ID for PNOC003 `BS_MVYA262V` sample `7316-3213` was changed from `A05265` to `A05233`. Is this correct? `r emo::ji("exclamation")`
 ```{r}
 setdiff(v16_hist[, c("Kids_First_Biospecimen_ID", "sample_id", "aliquot_id", "cohort")],
         v17_hist[, c("Kids_First_Biospecimen_ID", "sample_id", "aliquot_id", "cohort")])
