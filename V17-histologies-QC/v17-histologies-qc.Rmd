@@ -1,0 +1,164 @@
+---
+title: "V17 OpenPBTA Histologies File QC"
+output: html_notebook    
+toc: TRUE
+toc_float: TRUE
+editor_options: 
+  chunk_output_type: inline
+---
+```{r global_options, include=F}
+knitr::opts_chunk$set(error = F, echo = T, warning = T, message = T)
+```
+
+
+# Load packages
+```{r}
+suppressMessages(library(dplyr))
+suppressMessages(library(emo))
+```
+
+# Directories and Files
+## Directories
+```{r}
+# Data directory
+new_data_dir <- file.path("~/Documents/GitHub/jharenza.github.io/openPBTA-notebooks/V17-histologies-QC/data/")
+pbta_data_dir <- file.path("~/OpenPBTA-analysis/data/release-v16-20200320/")
+```
+
+## Input Filepaths
+```{r}
+pbta_hist_file <- file.path(pbta_data_dir, "pbta-histologies.tsv")
+v17_hist_file <- file.path(new_data_dir, "Open PBTA v17 Candidate - v2.tsv")
+```
+## Read in files
+```{r}
+v16_hist <- read.delim(pbta_hist_file, sep = "\t", header = T)
+v17_hist <- read.delim(v17_hist_file, sep = "\t", header = T)
+```
+## First, assess dimensions whether new column names match the old
+#### New columns: `pathology_free_text_diagnosis` and `cohort_participant_id` and `glioma_brain_region` -> `CNS_region`
+```{r}
+dim(v16_hist)
+dim(v17_hist)
+setdiff(names(v16_hist), names(v17_hist))
+setdiff(names(v17_hist), names(v16_hist))
+```
+## Check levels of histology columns
+#### These levels look as expected `r emo::ji("white_check_mark")`
+```{r}
+as.data.frame(table(v17_hist$pathology_diagnosis))
+as.data.frame(table(v17_hist$integrated_diagnosis))
+as.data.frame(table(v17_hist$broad_histology))
+as.data.frame(table(v17_hist$short_histology))
+```
+## Check tables from v16 -> v17 for fields not expected to change (quick overview)
+#### Experimental strategy `r emo::ji("white_check_mark")`
+```{r}
+table(v16_hist$experimental_strategy)
+table(v17_hist$experimental_strategy)
+```
+#### Sample Type `r emo::ji("white_check_mark")`
+```{r}
+table(v16_hist$sample_type)
+table(v17_hist$sample_type)
+```
+#### Composition `r emo::ji("white_check_mark")`
+```{r}
+as.data.frame(table(v16_hist$composition))
+as.data.frame(table(v17_hist$composition))
+```
+#### Broad composition `r emo::ji("white_check_mark")`
+```{r}
+as.data.frame(table(v16_hist$broad_composition))
+as.data.frame(table(v17_hist$broad_composition))
+```
+#### Germline sex estimate `r emo::ji("white_check_mark")`
+```{r}
+as.data.frame(table(v16_hist$germline_sex_estimate))
+as.data.frame(table(v17_hist$germline_sex_estimate))
+```
+#### RNA library `r emo::ji("white_check_mark")`
+```{r}
+as.data.frame(table(v16_hist$RNA_library))
+as.data.frame(table(v17_hist$RNA_library))
+```
+#### Cohort `r emo::ji("white_check_mark")`
+```{r}
+as.data.frame(table(v16_hist$cohort))
+as.data.frame(table(v17_hist$cohort))
+```
+#### Sample and aliquot IDs `r emo::ji("x")` - PNOC003 `BS_MVYA262V` sample `7316-3213` was changed from `A05265` to `A05233`. Is this correct? `r emo::ji("exclamation")`
+```{r}
+setdiff(v16_hist[, c("Kids_First_Biospecimen_ID", "sample_id", "aliquot_id", "cohort")],
+        v17_hist[, c("Kids_First_Biospecimen_ID", "sample_id", "aliquot_id", "cohort")])
+setdiff(v17_hist[, c("Kids_First_Biospecimen_ID", "sample_id", "aliquot_id", "cohort")],
+        v16_hist[, c("Kids_First_Biospecimen_ID", "sample_id", "aliquot_id", "cohort")])
+```
+#### Sequencing Center - looks like `BS_QB84TBA3` and `BS_S2TA8R29` previously NA were updated to `NantOmics`. Is this correct? `r emo::ji("exclamation")`
+```{r}
+as.data.frame(table(v16_hist$seq_center))
+as.data.frame(table(v17_hist$seq_center))
+setdiff(v16_hist[, c("Kids_First_Biospecimen_ID", "seq_center")],
+        v17_hist[, c("Kids_First_Biospecimen_ID", "seq_center")])
+setdiff(v17_hist[, c("Kids_First_Biospecimen_ID", "seq_center")],
+        v16_hist[, c("Kids_First_Biospecimen_ID", "seq_center")])
+```
+#### Tumor/Normal Fraction and Ploidy `r emo::ji("white_check_mark")`
+```{r}
+setdiff(v16_hist[, c("Kids_First_Biospecimen_ID", "normal_fraction", "tumor_fraction", "tumor_ploidy")],
+        v17_hist[, c("Kids_First_Biospecimen_ID", "normal_fraction", "tumor_fraction", "tumor_ploidy")])
+setdiff(v17_hist[, c("Kids_First_Biospecimen_ID", "normal_fraction", "tumor_fraction", "tumor_ploidy")],
+        v16_hist[, c("Kids_First_Biospecimen_ID", "normal_fraction", "tumor_fraction", "tumor_ploidy")]) 
+```
+#### Tumor Descriptor `r emo::ji("x")`
+```{r}
+as.data.frame(table(v16_hist$tumor_descriptor))
+sum(as.data.frame(table(v16_hist$tumor_descriptor))$Freq)
+as.data.frame(table(v17_hist$tumor_descriptor))
+sum(as.data.frame(table(v17_hist$tumor_descriptor))$Freq)
+```
+## Which are the samples that have had Tumor Descriptor changes?
+#### 105 samples, mostly CBTTC - Seems like a lot, but could be reasonable with the refresh. Is this correct? `r emo::ji("exclamation")`
+```{r}
+setdiff(v17_hist[,c("Kids_First_Biospecimen_ID", "tumor_descriptor", "cohort")], v16_hist[,c("Kids_First_Biospecimen_ID", "tumor_descriptor", "cohort")])
+```
+## Did new subtypes get captured?
+#### Went from 493 to 1015 subtypes, `BRAF` subtypes look to be updated, LGG subtypes added. `r emo::ji("white_check_mark")`
+```{r}
+as.data.frame(table(v16_hist$molecular_subtype))
+sum(as.data.frame(table(v16_hist$molecular_subtype))$Freq)
+as.data.frame(table(v17_hist$molecular_subtype))
+sum(as.data.frame(table(v17_hist$molecular_subtype))$Freq)
+```
+## How many biospecimen pathology diagnoses were changed?
+#### 33
+```{r}
+setdiff(v17_hist[,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "cohort")], v16_hist[,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "cohort")])
+#A dd to df
+path_diff <- as.data.frame(setdiff(v17_hist[,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "cohort")], v16_hist[,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "cohort")]))
+# How many per cohort?
+table(path_diff$cohort)
+```
+#### Are the `integrated_diagnosis`, `broad_histology`, and `short_histology` NA for these samples? Looks like yes for CBTTC, but no for PNOC0003 `r emo::ji("exclamation")`
+#### Note: For consistency of the process, we could make these NA for the PNOC003 samples for which `pathology_diagnosis` changed, however, the argument against this could be that we know all PNOC003 samples are DMGs and thus would not have `integrated_diagnosis`, `broad_histology`, and `short_histology` changes, so keeping these values and subtyping them from those values would be fine.
+```{r}
+v17_hist[v17_hist$Kids_First_Biospecimen_ID %in% path_diff$Kids_First_Biospecimen_ID,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "integrated_diagnosis", "broad_histology", "short_histology", "cohort")]
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
