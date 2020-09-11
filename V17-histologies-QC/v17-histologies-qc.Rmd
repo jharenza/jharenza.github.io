@@ -13,7 +13,6 @@ knitr::opts_chunk$set(error = F, echo = T, warning = T, message = T)
 
 # Load packages
 ```{r}
-suppressMessages(library(dplyr))
 suppressMessages(library(emo))
 ```
 
@@ -36,7 +35,7 @@ v16_hist <- read.delim(pbta_hist_file, sep = "\t", header = T)
 v17_hist <- read.delim(v17_hist_file, sep = "\t", header = T)
 ```
 ## First, assess dimensions whether new column names match the old
-#### New columns: `pathology_free_text_diagnosis` and `cohort_participant_id` and `glioma_brain_region` -> `CNS_region`
+#### New columns: `pathology_free_text_diagnosis` and `cohort_participant_id` and `glioma_brain_region` -> `CNS_region` `r emo::ji("white_check_mark")`
 ```{r}
 dim(v16_hist)
 dim(v17_hist)
@@ -140,11 +139,10 @@ path_diff <- as.data.frame(setdiff(v17_hist[,c("Kids_First_Biospecimen_ID", "pat
 table(path_diff$cohort)
 ```
 #### Are the `integrated_diagnosis`, `broad_histology`, and `short_histology` NA for these samples? Looks like yes for CBTTC, but no for PNOC0003 `r emo::ji("exclamation")`
-#### Note: For consistency of the process, we could make these NA for the PNOC003 samples for which `pathology_diagnosis` changed, however, the argument against this could be that we know all PNOC003 samples are DMGs and thus would not have `integrated_diagnosis`, `broad_histology`, and `short_histology` changes, so keeping these values and subtyping them from those values would be fine.
 ```{r}
 v17_hist[v17_hist$Kids_First_Biospecimen_ID %in% path_diff$Kids_First_Biospecimen_ID,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "integrated_diagnosis", "broad_histology", "short_histology", "cohort")]
 ```
-
+#### Note: For consistency of the process, we could make these NA for the PNOC003 samples for which `pathology_diagnosis` changed, however, the argument against this could be that we know all PNOC003 samples are DMGs and thus would not have `integrated_diagnosis`, `broad_histology`, and `short_histology` changes, so keeping these values and subtyping them from those values would be fine.
 
 
 
