@@ -96,12 +96,13 @@ There seem to be two blood samples that are now not reported in Bailey's table
 as.data.frame(table(hgg_hist$composition))
 as.data.frame(table(new_hist$composition))
 ```
-#### Broad composition `r emo::ji("white_check_mark")`
+#### Broad composition `r emo::ji("x")`
+Looks like this logic was missed
 ```{r}
 as.data.frame(table(hgg_hist$broad_composition))
 as.data.frame(table(new_hist$broad_composition))
 ```
-#### Germline sex estimate `r emo::ji("white_check_mark")`
+#### Germline sex estimate - NA `r emo::ji("white_check_mark")`
 ```{r}
 as.data.frame(table(hgg_hist$germline_sex_estimate))
 as.data.frame(table(new_hist$germline_sex_estimate))
