@@ -49,15 +49,15 @@ dim(hgg_hist)
 dim(new_hist)
 setdiff(names(hgg_hist), names(new_hist))
 setdiff(names(new_hist), names(hgg_hist))
+```
+```{r}
 # I will update those for now so some of the below matching will work
 colnames(hgg_hist)[colnames(hgg_hist) == "glioma_brain_region"] <- "CNS_region"
 colnames(hgg_hist)[colnames(hgg_hist) == "os_days"] <- "OS_days"
 colnames(hgg_hist)[colnames(hgg_hist) == "os_status"] <- "OS_status"
 hgg_hist$pathology_free_text_diagnosis <- NA
 colnames(new_hist)[colnames(new_hist) == "cancer_predisposition"] <- "cancer_predispositions"
-
 ```
-
 ## Check levels of histology columns
 #### These levels look as expected `r emo::ji("white_check_mark")`
 ```{r}
