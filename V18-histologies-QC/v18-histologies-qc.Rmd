@@ -176,21 +176,3 @@ table(path_diff$cohort)
 ```{r}
 new_hist[new_hist$Kids_First_Biospecimen_ID %in% path_diff$Kids_First_Biospecimen_ID,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "integrated_diagnosis", "broad_histology", "short_histology", "cohort")]
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
