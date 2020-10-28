@@ -1,0 +1,195 @@
+---
+title: "V18 OpenPBTA Histologies File QC"
+output: html_notebook    
+toc: TRUE
+toc_float: TRUE
+editor_options: 
+  chunk_output_type: inline
+---
+```{r global_options, include=F}
+knitr::opts_chunk$set(error = F, echo = T, warning = T, message = T)
+```
+
+
+# Load packages
+```{r}
+suppressMessages(library(emo))
+```
+
+# Directories and Files
+## Directories
+```{r}
+# Data directory
+new_data_dir <- file.path("~/Documents/GitHub/jharenza.github.io/openPBTA-notebooks/V18-histologies-QC/data/")
+pbta_data_dir <- file.path("~/OpenPBTA-analysis/data/release-v17-20200908/")
+```
+
+## Input Filepaths
+```{r}
+pbta_hist_file <- file.path(pbta_data_dir, "pbta-histologies.tsv")
+hgg_hist_file <- file.path(new_data_dir, "pbta-histologies.tsv")
+v18_hist_file <- file.path(new_data_dir, "Base Histologies Files Review - All.tsv")
+```
+## Read in files
+```{r}
+old_hist <- read.delim(pbta_hist_file, sep = "\t", header = T)
+hgg_hist <- read.delim(hgg_hist_file, sep = "\t", header = T)
+full_hist <- read.delim(v18_hist_file, sep = "\t", header = T)
+```
+## Subset new file for only those sampleIDs required
+```{r}
+new_hist <- full_hist[full_hist$Kids_First_Biospecimen_ID %in% hgg_hist$Kids_First_Biospecimen_ID,]
+```
+
+## First, assess dimensions whether new column names match the old
+#### Krutika needs to update column names: `os_days` -> `OS_days`, `os_status` -> `OS_days`, and `glioma_brain_region` -> `CNS_region`, add `pathology_free_text_diagnosis`, and Bailey update `cancer_predisposition` to `cancer_predispositions`
+
+```{r}
+dim(hgg_hist)
+dim(new_hist)
+setdiff(names(hgg_hist), names(new_hist))
+setdiff(names(new_hist), names(hgg_hist))
+# I will update those for now so some of the below matching will work
+colnames(hgg_hist)[colnames(hgg_hist) == "glioma_brain_region"] <- "CNS_region"
+colnames(hgg_hist)[colnames(hgg_hist) == "os_days"] <- "OS_days"
+colnames(hgg_hist)[colnames(hgg_hist) == "os_status"] <- "OS_status"
+hgg_hist$pathology_free_text_diagnosis <- NA
+colnames(new_hist)[colnames(new_hist) == "cancer_predisposition"] <- "cancer_predispositions"
+
+```
+
+## Check levels of histology columns
+#### These levels look as expected `r emo::ji("white_check_mark")`
+```{r}
+as.data.frame(table(new_hist$pathology_diagnosis))
+as.data.frame(table(new_hist$integrated_diagnosis))
+as.data.frame(table(new_hist$broad_histology))
+as.data.frame(table(new_hist$short_histology))
+```
+## Check tables from v17 -> v18 for fields not expected to change (quick overview)
+#### Experimental strategy `r emo::ji("exclamation")`
+```{r}
+table(hgg_hist$experimental_strategy)
+table(new_hist$experimental_strategy)
+```
+### Extra RNA-Seq specimen in hgg `r emo::ji("exclamation")`
+```{r}
+hgg_rna <- subset(hgg_hist, experimental_strategy == "RNA-Seq")
+new_rna <- subset(new_hist, experimental_strategy == "RNA-Seq")
+setdiff(hgg_rna$Kids_First_Biospecimen_ID, new_rna$Kids_First_Biospecimen_ID) #no diff
+hgg_rna[duplicated(hgg_rna$Kids_First_Biospecimen_ID),] #BS_NNPEC7W1
+#temp remove row 242
+hgg_hist <- hgg_hist[-242,]
+
+```
+
+
+
+#### Sample Type `r emo::ji("white_check_mark")`
+```{r}
+table(hgg_hist$sample_type)
+table(new_hist$sample_type)
+```
+#### Composition `r emo::ji("exclamation")`
+There seem to be two blood samples that are now not reported in Bailey's table
+```{r}
+as.data.frame(table(hgg_hist$composition))
+as.data.frame(table(new_hist$composition))
+```
+#### Broad composition `r emo::ji("white_check_mark")`
+```{r}
+as.data.frame(table(hgg_hist$broad_composition))
+as.data.frame(table(new_hist$broad_composition))
+```
+#### Germline sex estimate `r emo::ji("white_check_mark")`
+```{r}
+as.data.frame(table(hgg_hist$germline_sex_estimate))
+as.data.frame(table(new_hist$germline_sex_estimate))
+```
+#### RNA library `r emo::ji("exclamation")`
+"Stranded"" needs case harmonization - should be lowercase "stranded" and polyA should be "poly-A"
+```{r}
+as.data.frame(table(hgg_hist$RNA_library))
+as.data.frame(table(new_hist$RNA_library))
+```
+#### Cohort `r emo::ji("white_check_mark")`
+```{r}
+as.data.frame(table(hgg_hist$cohort))
+as.data.frame(table(new_hist$cohort))
+```
+#### Sample and aliquot IDs `r emo::ji("white_check_mark")`
+```{r}
+setdiff(hgg_hist[, c("Kids_First_Biospecimen_ID", "sample_id", "aliquot_id", "cohort")],
+        new_hist[, c("Kids_First_Biospecimen_ID", "sample_id", "aliquot_id", "cohort")])
+setdiff(new_hist[, c("Kids_First_Biospecimen_ID", "sample_id", "aliquot_id", "cohort")],
+        hgg_hist[, c("Kids_First_Biospecimen_ID", "sample_id", "aliquot_id", "cohort")])
+```
+#### Sequencing Center `r emo::ji("white_check_mark")`
+```{r}
+as.data.frame(table(hgg_hist$seq_center))
+as.data.frame(table(new_hist$seq_center))
+setdiff(hgg_hist[, c("Kids_First_Biospecimen_ID", "seq_center")],
+        new_hist[, c("Kids_First_Biospecimen_ID", "seq_center")])
+setdiff(new_hist[, c("Kids_First_Biospecimen_ID", "seq_center")],
+        hgg_hist[, c("Kids_First_Biospecimen_ID", "seq_center")])
+```
+#### Tumor/Normal Fraction and Ploidy - NA for now
+```{r}
+setdiff(hgg_hist[, c("Kids_First_Biospecimen_ID", "normal_fraction", "tumor_fraction", "tumor_ploidy")],
+        new_hist[, c("Kids_First_Biospecimen_ID", "normal_fraction", "tumor_fraction", "tumor_ploidy")])
+setdiff(new_hist[, c("Kids_First_Biospecimen_ID", "normal_fraction", "tumor_fraction", "tumor_ploidy")],
+        hgg_hist[, c("Kids_First_Biospecimen_ID", "normal_fraction", "tumor_fraction", "tumor_ploidy")]) 
+```
+#### Tumor Descriptor `r emo::ji("x")`
+```{r}
+as.data.frame(table(hgg_hist$tumor_descriptor))
+sum(as.data.frame(table(hgg_hist$tumor_descriptor))$Freq)
+as.data.frame(table(new_hist$tumor_descriptor))
+sum(as.data.frame(table(new_hist$tumor_descriptor))$Freq)
+
+#CBTTC sample labeled as Initial CNS Tumor;Progressive and PNOC003 sample as Relapse were changed with last DS update before V17. Krutika will update to use the v17 release file
+```
+## Which are the samples that have had Tumor Descriptor changes?
+#### 9 samples, mostly CBTTC, some PNOC003 `r emo::ji("exclamation")`
+```{r}
+setdiff(new_hist[,c("Kids_First_Biospecimen_ID", "tumor_descriptor", "cohort")], hgg_hist[,c("Kids_First_Biospecimen_ID", "tumor_descriptor", "cohort")])
+```
+## Did new subtypes get captured?
+#### TBD `r emo::ji("white_check_mark")`
+```{r}
+as.data.frame(table(hgg_hist$molecular_subtype))
+sum(as.data.frame(table(hgg_hist$molecular_subtype))$Freq)
+as.data.frame(table(new_hist$molecular_subtype))
+sum(as.data.frame(table(new_hist$molecular_subtype))$Freq)
+```
+## How many biospecimen pathology diagnoses were changed? `r emo::ji("white_check_mark")`
+#### 7
+```{r}
+setdiff(new_hist[,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "cohort")], hgg_hist[,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "cohort")])
+# Add to df
+path_diff <- as.data.frame(setdiff(new_hist[,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "cohort")], hgg_hist[,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "cohort")]))
+# How many per cohort?
+table(path_diff$cohort)
+```
+#### Are the `integrated_diagnosis`, `broad_histology`, and `short_histology` NA for these samples? Yes `r emo::ji("white_check_mark")`
+```{r}
+new_hist[new_hist$Kids_First_Biospecimen_ID %in% path_diff$Kids_First_Biospecimen_ID,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "integrated_diagnosis", "broad_histology", "short_histology", "cohort")]
+```
+#### Note: For consistency of the process, we could make these NA for the PNOC003 samples for which `pathology_diagnosis` changed, however, the argument against this could be that we know all PNOC003 samples are DMGs and thus would not have `integrated_diagnosis`, `broad_histology`, and `short_histology` changes, so keeping these values and subtyping them from those values would be fine.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

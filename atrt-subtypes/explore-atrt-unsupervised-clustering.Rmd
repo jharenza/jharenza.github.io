@@ -1,0 +1,295 @@
+---
+title: "Explore whether ATRTs will cluster based on subtype"
+output: html_notebook    
+toc: TRUE
+toc_float: TRUE
+editor_options: 
+  chunk_output_type: inline
+---
+```{r global_options, include=F}
+knitr::opts_chunk$set(error = F, echo = T, warning = T, message = T)
+```
+
+
+# Load packages
+```{r}
+suppressMessages(library(dplyr))
+suppressMessages(library(umap))
+suppressMessages(library(ggplot2))
+suppressMessages(library(devtools))
+suppressMessages(library(gdata))
+```
+
+# Directories and Files
+## Directories
+```{r}
+# Data directory
+#data_dir <- file.path("~/Documents/GitHub/jharenza.github.io/openPBTA-notebooks/atrt-subtypes/data/")
+pbta_data_dir <- file.path("~/OpenPBTA-analysis/data/release-v17-20200908")
+# Create a results directory
+results_dir <- "results"
+if (!dir.exists(results_dir)) {
+  dir.create(results_dir, recursive = TRUE)
+}
+```
+
+## Input Filepaths
+```{r}
+pbta_rnaseq_file <- file.path(pbta_data_dir, "pbta-gene-expression-rsem-fpkm-collapsed.stranded.rds")
+pbta_rnaseq_file_full <- file.path(pbta_data_dir, "pbta-gene-expression-rsem-fpkm.stranded.rds")
+pbta_hist_file <- file.path(pbta_data_dir, "pbta-histologies.tsv")
+```
+## Read in files
+```{r}
+# PBTA
+pbta_fpkm_collapsed_mat <- readRDS(pbta_rnaseq_file)
+pbta_fpkm_full_mat <- readRDS(pbta_rnaseq_file_full)
+pbta_histologies_df <- read.delim(pbta_hist_file, sep = "\t", header = T)
+```
+
+# PBTA wrangling
+```{r}
+# Only pull out sample identifiers (KidsFirst biospecimen identifiers) that correspond to medulloblastoma samples
+atrt_samples <- pbta_histologies_df %>%
+  filter(integrated_diagnosis == "Atypical Teratoid Rhabdoid Tumor") %>%
+  filter(experimental_strategy == "RNA-Seq") %>%
+  filter(RNA_library == "stranded") %>%
+  pull(Kids_First_Biospecimen_ID)
+# Calculate N
+length(atrt_samples)
+```
+# Create matrices of only MB samples
+```{r}
+# select PBTA MB samples only
+pbta_mb_coll_df <- pbta_fpkm_collapsed_mat %>% 
+  select(medulloblastoma_samples)
+pbta_mb_full_df <- pbta_fpkm_full_mat %>% 
+  select(medulloblastoma_samples)
+# select PPTC MB samples only
+pptc_mb_df <- pptc_fpkm_df %>% 
+  select(pptc_subtypes_df$Sample)
+length(pptc_subtypes_df$Sample)
+# How many per subtype?
+table(pptc_subtypes_df$class_subtype)
+table(pptc_subtypes_df$path_subtype)
+pptc_subtypes_df
+# 12/13 classified correctly - too few samples for clustering
+12/13*100
+
+# How many in MT dataset?
+length(mt_annot$Sample)
+table(mt_annot$Subgroup)
+
+# convert to matrix
+pbta_mb_coll_mat <- as.matrix(pbta_mb_coll_df)
+pbta_mb_full_mat <- as.matrix(pbta_mb_full_df)
+mt_fpkm_mat <- as.matrix(mt_fpkm_df)
+```
+# Transform matrices
+## log2 matrix
+```{r}
+pbta_coll_log2 <- log2(pbta_mb_coll_mat)
+pbta_full_log2 <- log2(pbta_mb_full_mat)
+mt_mat_log2 <- log2(mt_fpkm_mat)
+```
+# Calculate variance for OpenPBTA collapsed data
+```{r}
+gene_variance <- matrixStats::rowVars(pbta_coll_log2)
+# Find the value that we'll use as a threshold to filter the top 5%
+variance_threshold <- quantile(gene_variance, 0.95, na.rm = T)
+# Row indices of high variance genes
+high_variance_index <- which(gene_variance > variance_threshold)
+```
+# Set seed for reproducible UMAP results
+```{r}
+set.seed(2020)
+```
+
+# OpenPBTA stranded RNA-Seq (N = 121) UMAP clustering
+## Using collapsed matrix
+```{r}
+# expects features (genes) to be columns, so we have to use t()
+umap_results <- umap::umap(t(pbta_coll_log2[high_variance_index, ]))
+# Make a data frame of the layout results and join with molecular subtype 
+umap_plot_df <- data.frame(umap_results$layout) %>%
+  tibble::rownames_to_column("Kids_First_Biospecimen_ID") %>%
+  inner_join(mb_molecular_subtype_df)
+# Plot by subtype
+umap_plot_df %>%
+  ggplot(aes(x = X1, 
+             y = X2,
+             color = molecular_subtype)) +
+  geom_point(size = 3, alpha = 0.7) +
+  theme_bw() +
+  xlab("UMAP1") +
+  ylab("UMAP2")
+```
+```{r}
+# Plot by sequencing center - is this having any effect? (Not really)
+umap_plot_df %>%
+  ggplot(aes(x = X1, 
+             y = X2,
+             color = seq_center)) +
+  geom_point(size = 3, alpha = 0.7) +
+  theme_bw() +
+  xlab("UMAP1") +
+  ylab("UMAP2")
+```
+# Merge MM2S classifier UMAP
+## Will use this later
+```{r}
+pbta_results_mer <- merge(umap_plot_df, pbta_combined_subtypes, by = "Kids_First_Biospecimen_ID")
+head(pbta_results_mer)
+```
+# Calculate variance for OpenPBTA non-collapsed data
+## Does this give similar results?
+
+```{r}
+gene_variance <- matrixStats::rowVars(pbta_full_log2)
+variance_threshold <- quantile(gene_variance, 0.95, na.rm = T)
+high_variance_index <- which(gene_variance > variance_threshold)
+```
+# OpenPBTA stranded RNA-Seq (N = 121) UMAP clustering - full matrix
+
+```{r}
+umap_results <- umap::umap(t(pbta_full_log2[high_variance_index, ]))
+umap_plot_df <- data.frame(umap_results$layout) %>%
+  tibble::rownames_to_column("Kids_First_Biospecimen_ID") %>%
+  inner_join(mb_molecular_subtype_df)
+umap_plot_df %>%
+  ggplot(aes(x = X1, 
+             y = X2,
+             color = molecular_subtype)) +
+  geom_point(size = 3, alpha = 0.7) +
+  theme_bw() +
+  xlab("UMAP1") +
+  ylab("UMAP2")
+```
+- Yes, will proceed only with the collapsed matrix.
+
+# Exploration
+## Are the subtypes that don't classify by unsupervised clustering the same subtypes that did not match pathology subtypes?
+```{r}
+pbta_results_mer %>%
+  ggplot(aes(x = X1, 
+             y = X2,
+             color = pathology_subtype,
+             shape = mb_classifier_prediction)) +
+  geom_point(size = 3, alpha = 0.7) +
+  theme_bw() +
+  xlab("UMAP1") +
+  ylab("UMAP2")
+```
+## Misclassified samples:
+- For the 3 samples within the WNT cluster not classified as WNT, two were WNT by pathology and the other was not noted by pathology. 
+- For 1 sample classified as WNT that clusterd with SHH, pathology was not noted. 
+- For the 6 samples within the SHH cluster that were classified as Group 4, 3 were noted as SHH by pathology. 
+- 1 was SHH by pathology. 
+- Within this cluster, one sample was classified as SHH but pathology noted as WNT. 
+- The other 3 samples were not noted by pathology. 
+- Two samples classified as WNT present in the Group 3/4 cluster were not noted by pathology. 
+- 6 samples were classified as SHH but are in the Group 3/4 cluster. 2 of these were SHH by pathology, and the rest were not noted.
+# Examine accuracy for this dataset
+```{r}
+# Subset for only samples that had pathology results
+subtypes_calc <- subset(pbta_combined_subtypes, !is.na(pathology_subtype)) 
+# convert to character to perform ifelse on factors with different levels
+subtypes_calc$pathology_subtype <- as.character(subtypes_calc$pathology_subtype)
+subtypes_calc$mb_classifier_prediction <- as.character(subtypes_calc$mb_classifier_prediction)
+# Create column to calculate matches
+subtypes_calc$mbclass_v_path <- ifelse(subtypes_calc$pathology_subtype == subtypes_calc$mb_classifier_prediction, "true", 
+                                       ifelse(subtypes_calc$pathology_subtype == "Group 3 or 4" & subtypes_calc$mb_classifier_prediction == "Group3", "true", 
+                                              ifelse(subtypes_calc$pathology_subtype == "Group 3 or 4" & subtypes_calc$mb_classifier_prediction == "Group4", "true", "false")))
+# How many were predicted correctly (true)?
+table(subtypes_calc$mbclass_v_path)
+# Percent of classifications that match MB classifier calls
+(26/(6+26))*100
+# Create column to calculate matches for MM2S classifier
+subtypes_calc$MM2S_v_path <- ifelse(subtypes_calc$pathology_subtype == subtypes_calc$MM2S_prediction, "true", 
+                                       ifelse(subtypes_calc$pathology_subtype == "Group 3 or 4" & subtypes_calc$MM2S_prediction == "Group3", "true", 
+                                              ifelse(subtypes_calc$pathology_subtype == "Group 3 or 4" & subtypes_calc$MM2S_prediction == "Group4", "true", "false")))
+table(subtypes_calc$MM2S_v_path)
+# Percent of classifications that match MM2S classifier calls
+(25/(7+25))*100
+```
+
+# plot MM2S predictions
+## First, combine matrix with subtypes
+
+```{r}
+gene_variance <- matrixStats::rowVars(pbta_coll_log2)
+variance_threshold <- quantile(gene_variance, 0.95, na.rm = T)
+high_variance_index <- which(gene_variance > variance_threshold)
+umap_results <- umap::umap(t(pbta_coll_log2[high_variance_index, ]))
+umap_plot_df <- data.frame(umap_results$layout) %>%
+  tibble::rownames_to_column("Kids_First_Biospecimen_ID") %>%
+  inner_join(pbta_combined_subtypes)
+```  
+## Does this data look better?
+```{r}
+umap_plot_df %>%
+  ggplot(aes(x = X1, 
+             y = X2,
+             color = MM2S_prediction,
+             shape = mb_classifier_prediction)) +
+  geom_point(size = 3, alpha = 0.7) +
+  theme_bw() +
+  xlab("UMAP1") +
+  ylab("UMAP2")
+```
+
+
+# Calculate variance for Michael Taylor RNA-Seq data
+```{r}
+gene_variance <- matrixStats::rowVars(mt_mat_log2)
+variance_threshold <- quantile(gene_variance, 0.95, na.rm = T)
+high_variance_index <- which(gene_variance > variance_threshold)
+```
+
+# Michael Taylor (N = 97) UMAP clustering 
+```{r}
+umap_results <- umap::umap(t(mt_mat_log2[high_variance_index, ]))
+umap_plot_df <- data.frame(umap_results$layout) %>%
+  tibble::rownames_to_column("Sample") %>%
+  inner_join(mt_annot)
+# Plot
+umap_plot_df %>%
+  ggplot(aes(x = X1, 
+             y = X2,
+             color = Subgroup)) +
+  geom_point(size = 3, alpha = 0.7) +
+  theme_bw() +
+  xlab("UMAP1") +
+  ylab("UMAP2")
+```
+## Observation:
+- It looks like there are too few WNT samples (N = 3) to enable unsupervised clustering of those samples in this dataset.
+
+# Rerun of OpenPBTA stranded RNA-Seq (N = 121) UMAP clustering
+- Turns out the initial FPKM values were not log2 transformed, thus MB subtypes in pbta-histologies.tsv from MB classifier are not accurate.
+```{r}
+# Replot UMAP with new subtype labels
+gene_variance <- matrixStats::rowVars(pbta_coll_log2)
+variance_threshold <- quantile(gene_variance, 0.95, na.rm = T)
+high_variance_index <- which(gene_variance > variance_threshold)
+umap_results <- umap::umap(t(pbta_coll_log2[high_variance_index, ]))
+# Make a data frame of the layout results and join with molecular subtype 
+umap_plot_df <- data.frame(umap_results$layout) %>%
+  tibble::rownames_to_column("Kids_First_Biospecimen_ID") %>%
+  inner_join(pbta_combined_subtypes)
+# Plot by subtype
+umap_plot_df %>%
+  ggplot(aes(x = X1, 
+             y = X2,
+             color = mb_classifier_prediction)) +
+  geom_point(size = 3, alpha = 0.7) +
+  theme_bw() +
+  xlab("UMAP1") +
+  ylab("UMAP2")
+```
+-  This looks A LOT better!
+
+# session info
+```{r}
+session_info()
+```
