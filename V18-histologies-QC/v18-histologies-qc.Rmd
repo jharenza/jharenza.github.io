@@ -41,7 +41,7 @@ full_hist <- read.delim(v18_hist_file, sep = "\t", header = T)
 new_hist <- full_hist[full_hist$Kids_First_Biospecimen_ID %in% hgg_hist$Kids_First_Biospecimen_ID,]
 ```
 
-## First, assess dimensions whether new column names match the old
+## First, assess dimensions whether new column names match the old `r emo::ji("x")`
 #### Krutika needs to update column names: `os_days` -> `OS_days`, `os_status` -> `OS_days`, and `glioma_brain_region` -> `CNS_region`, add `pathology_free_text_diagnosis`, and Bailey update `cancer_predisposition` to `cancer_predispositions`
 
 ```{r}
@@ -90,7 +90,7 @@ hgg_hist <- hgg_hist[-242,]
 table(hgg_hist$sample_type)
 table(new_hist$sample_type)
 ```
-#### Composition `r emo::ji("exclamation")`
+#### Composition `r emo::ji("x")`
 There seem to be two blood samples that are now not reported in Bailey's table
 ```{r}
 as.data.frame(table(hgg_hist$composition))
@@ -107,7 +107,7 @@ as.data.frame(table(new_hist$broad_composition))
 as.data.frame(table(hgg_hist$germline_sex_estimate))
 as.data.frame(table(new_hist$germline_sex_estimate))
 ```
-#### RNA library `r emo::ji("exclamation")`
+#### RNA library `r emo::ji("x")`
 "Stranded"" needs case harmonization - should be lowercase "stranded" and polyA should be "poly-A"
 ```{r}
 as.data.frame(table(hgg_hist$RNA_library))
