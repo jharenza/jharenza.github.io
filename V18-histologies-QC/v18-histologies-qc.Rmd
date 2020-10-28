@@ -41,8 +41,8 @@ full_hist <- read.delim(v18_hist_file, sep = "\t", header = T)
 new_hist <- full_hist[full_hist$Kids_First_Biospecimen_ID %in% hgg_hist$Kids_First_Biospecimen_ID,]
 ```
 
-## First, assess dimensions whether new column names match the old `r emo::ji("x")`
-#### Krutika needs to update column names: `os_days` -> `OS_days`, `os_status` -> `OS_days`, and `glioma_brain_region` -> `CNS_region`, add `pathology_free_text_diagnosis`, and Bailey update `cancer_predisposition` to `cancer_predispositions`
+## First, assess dimensions whether new column names match the old
+#### `r emo::ji("x")` Krutika needs to update column names: `os_days` -> `OS_days`, `os_status` -> `OS_days`, and `glioma_brain_region` -> `CNS_region`, add `pathology_free_text_diagnosis`, and Bailey update `cancer_predisposition` to `cancer_predispositions`
 
 ```{r}
 dim(hgg_hist)
@@ -72,7 +72,7 @@ as.data.frame(table(new_hist$short_histology))
 table(hgg_hist$experimental_strategy)
 table(new_hist$experimental_strategy)
 ```
-### Extra RNA-Seq specimen in hgg `r emo::ji("exclamation")`
+#### Extra RNA-Seq specimen in hgg `r emo::ji("exclamation")`
 ```{r}
 hgg_rna <- subset(hgg_hist, experimental_strategy == "RNA-Seq")
 new_rna <- subset(new_hist, experimental_strategy == "RNA-Seq")
@@ -176,7 +176,7 @@ table(path_diff$cohort)
 ```{r}
 new_hist[new_hist$Kids_First_Biospecimen_ID %in% path_diff$Kids_First_Biospecimen_ID,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "integrated_diagnosis", "broad_histology", "short_histology", "cohort")]
 ```
-#### Note: For consistency of the process, we could make these NA for the PNOC003 samples for which `pathology_diagnosis` changed, however, the argument against this could be that we know all PNOC003 samples are DMGs and thus would not have `integrated_diagnosis`, `broad_histology`, and `short_histology` changes, so keeping these values and subtyping them from those values would be fine.
+
 
 
 
