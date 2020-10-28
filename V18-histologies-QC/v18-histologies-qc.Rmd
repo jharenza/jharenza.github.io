@@ -141,7 +141,7 @@ setdiff(hgg_hist[, c("Kids_First_Biospecimen_ID", "normal_fraction", "tumor_frac
 setdiff(new_hist[, c("Kids_First_Biospecimen_ID", "normal_fraction", "tumor_fraction", "tumor_ploidy")],
         hgg_hist[, c("Kids_First_Biospecimen_ID", "normal_fraction", "tumor_fraction", "tumor_ploidy")]) 
 ```
-#### Tumor Descriptor `r emo::ji("x")`
+#### Tumor Descriptor
 ```{r}
 as.data.frame(table(hgg_hist$tumor_descriptor))
 sum(as.data.frame(table(hgg_hist$tumor_descriptor))$Freq)
