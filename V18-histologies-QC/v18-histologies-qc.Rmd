@@ -42,7 +42,7 @@ new_hist <- full_hist[full_hist$Kids_First_Biospecimen_ID %in% hgg_hist$Kids_Fir
 ```
 
 ## First, assess dimensions whether new column names match the old
-#### `r emo::ji("x")` Krutika needs to update column names: `os_days` -> `OS_days`, `os_status` -> `OS_days`, and `glioma_brain_region` -> `CNS_region`, add `pathology_free_text_diagnosis`, and Bailey update `cancer_predisposition` to `cancer_predispositions`
+#### `r emo::ji("x")` Krutika needs to update column names: `os_days` -> `OS_days`, `os_status` -> `OS_status`, and `glioma_brain_region` -> `CNS_region`, add `pathology_free_text_diagnosis`, and Bailey update `cancer_predisposition` to `cancer_predispositions`
 
 ```{r}
 dim(hgg_hist)
