@@ -40,7 +40,7 @@ full_hist <- read_tsv(v18_hist_file, guess_max = 10000)
 ```
 ## Subset new file for only those sampleIDs required
 ```{r}
-new_ids <- read_tsv("~/Box Sync/D3B-share/projects/openPBTA/2020-11-16-new-rna-seq.txt", col_names = F) %>%
+new_ids <- read_tsv(file.path(new_data_dir, "2020-11-16-new-rna-seq.txt"), col_names = F) %>%
   pull(X1)
 all_ids <- c(new_ids, old_hist$Kids_First_Biospecimen_ID)
 new_hist <- full_hist %>%
@@ -171,13 +171,13 @@ setdiff(new_hist[,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "cohort"
 ```
 #### Are the `integrated_diagnosis`, `broad_histology`, and `short_histology` NA for these samples? Yes `r emo::ji("white_check_mark")`
 ```{r}
-new_hist[new_hist$Kids_First_Biospecimen_ID %in% path_diff$Kids_First_Biospecimen_ID,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "integrated_diagnosis", "broad_histology", "short_histology", "cohort")]
+#new_hist[new_hist$Kids_First_Biospecimen_ID %in% path_diff$Kids_First_Biospecimen_ID,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "integrated_diagnosis", "broad_histology", "short_histology", "cohort")]
 ```
 
 # Remove BS_XM1AHBDJ for mapping rate < 60%
 ```{r}
-new_hist <- new_hist %>%
-  filter(Kids_First_Biospecimen_ID != "BS_XM1AHBDJ")
+#new_hist <- new_hist %>%
+ # filter(Kids_First_Biospecimen_ID != "BS_XM1AHBDJ")
 ```
 
 # Add back BIXU fields from V17
