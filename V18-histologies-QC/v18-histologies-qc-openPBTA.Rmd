@@ -144,7 +144,9 @@ as.data.frame(table(old_hist$tumor_descriptor))
 sum(as.data.frame(table(old_hist$tumor_descriptor))$Freq)
 as.data.frame(table(new_hist$tumor_descriptor))
 sum(as.data.frame(table(new_hist$tumor_descriptor))$Freq)
+```
 
+```{r}
 missing_td <- new_hist %>%
   filter(tumor_descriptor == "Not Reported") %>%
   pull(Kids_First_Biospecimen_ID) %>%
