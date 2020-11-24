@@ -198,9 +198,9 @@ new_hist %>%
 ```{r}
 names(old_hist)
 
-# keeping int dx, broad/short hist for now just so CI does not break
+# add back BIXU-generated fields
 old_fields <- old_hist %>%
-  select(Kids_First_Biospecimen_ID, integrated_diagnosis, broad_histology, short_histology, germline_sex_estimate, normal_fraction, tumor_fraction, tumor_ploidy)
+  select(Kids_First_Biospecimen_ID, germline_sex_estimate, normal_fraction, tumor_fraction, tumor_ploidy)
 
 #remove those columns from V18 and replace
 updated_columns <- new_hist %>%
@@ -213,5 +213,5 @@ final_hist <- updated_columns %>%
 
 # Write new file
 ```{r}
-write.table(final_hist, "~/Documents/GitHub/jharenza.github.io/openPBTA-notebooks/V18-histologies-QC/output/pbta-histologies.tsv", sep = "\t", quote = F, col.names = T, row.names = F)
+write.table(final_hist, "~/Documents/GitHub/jharenza.github.io/openPBTA-notebooks/V18-histologies-QC/output/pbta-histologies-base.tsv", sep = "\t", quote = F, col.names = T, row.names = F)
 ```
