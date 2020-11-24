@@ -29,13 +29,11 @@ pbta_data_dir <- file.path("~/Documents/GitHub/jharenza/OpenPBTA-analysis/data/r
 ## Input Filepaths
 ```{r}
 pbta_hist_file <- file.path(pbta_data_dir, "pbta-histologies.tsv")
-hgg_hist_file <- file.path("~/Documents/GitHub/d3b-pnoc003-omics/data/pbta-histologies.tsv")
 v18_hist_file <- file.path(new_data_dir, "Base Histologies Files Review 20201116.tsv")
 ```
 ## Read in files
 ```{r}
 old_hist <- read_tsv(pbta_hist_file, guess_max = 3000)
-hgg_hist <- read_tsv(hgg_hist_file, guess_max = 3000)
 full_hist <- read_tsv(v18_hist_file, guess_max = 10000)
 ```
 ## Subset new file for only those sampleIDs required
@@ -53,36 +51,70 @@ dim(old_hist)
 dim(new_hist)
 setdiff(names(new_hist), names(old_hist))
 setdiff(names(old_hist), names(new_hist))
+# plus 8 samples, plus one new column for extent of tumor resection
 ```
 
 ## Check levels of histology columns
 #### These levels look as expected `r emo::ji("white_check_mark")`
 ```{r}
 as.data.frame(table(new_hist$pathology_diagnosis))
+# these will now be blank coming from Bailey
 as.data.frame(table(new_hist$integrated_diagnosis))
 as.data.frame(table(new_hist$broad_histology))
 as.data.frame(table(new_hist$short_histology))
 ```
-## Check tables from v17 -> v18 for fields expected to change (8 more RNA-Seq)
+## Check tables from v17 -> v18 for fields expected to change (8 more RNA-Seq; rest unchanged)
 #### Experimental strategy `r emo::ji("white_check_mark")`
 ```{r}
 table(old_hist$experimental_strategy)
 table(new_hist$experimental_strategy)
 ```
 
-#### Sample Type `r emo::ji("white_check_mark")`
+#### Sample Type -> 8 more tumor samples `r emo::ji("white_check_mark")`
 ```{r}
 table(old_hist$sample_type)
 table(new_hist$sample_type)
 ```
-#### CNS_region `r emo::ji("white_check_mark")`
-# few updates
+#### Tumor Descriptor `r emo::ji("x")`
+3 new PNOC BS_IDs do not have clinical metadata matched
 ```{r}
-table(old_hist$CNS_region)
-table(new_hist$CNS_region)
+as.data.frame(table(old_hist$tumor_descriptor))
+sum(as.data.frame(table(old_hist$tumor_descriptor))$Freq)
+as.data.frame(table(new_hist$tumor_descriptor))
+sum(as.data.frame(table(new_hist$tumor_descriptor))$Freq)
+```
+# Add primary site and tumor descriptor
+```{r}
+missing_td <- new_hist %>%
+  filter(tumor_descriptor == "Not Reported") %>%
+  pull(Kids_First_Biospecimen_ID) %>%
+  intersect(new_ids)
+
+#Looks like primary site (Pons/Brainstem) and tumor descriptor (Initial CNS Tumor) are missing for these 3 samples - add back
+new_hist <- new_hist %>%
+  mutate(
+    tumor_descriptor = 
+      case_when(Kids_First_Biospecimen_ID %in% missing_td ~ "Initial CNS Tumor", 
+                TRUE ~ tumor_descriptor),
+    primary_site = 
+      case_when(Kids_First_Biospecimen_ID %in% missing_td ~ "Pons/Brainstem",
+                TRUE ~ primary_site))
 ```
 
-#### Composition `r emo::ji("white_check_mark")`
+#### Is CNS_region missing as well? `r emo::ji("white_check_mark")`
+# No, and this is because all PNOC003 samples were coded as Midline
+```{r}
+# first, sort tables 
+old_hist <- old_hist %>%
+  arrange(Kids_First_Biospecimen_ID)
+new_hist <- new_hist%>%
+  arrange(Kids_First_Biospecimen_ID)
+
+setdiff(new_hist[,c("Kids_First_Biospecimen_ID", "primary_site", "CNS_region")], 
+        old_hist[,c("Kids_First_Biospecimen_ID", "primary_site", "CNS_region")])
+```
+
+#### Composition - 8 more solid tissue `r emo::ji("white_check_mark")`
 ```{r}
 as.data.frame(table(old_hist$composition))
 as.data.frame(table(new_hist$composition))
@@ -117,12 +149,12 @@ new_hist <- new_hist %>%
       case_when(RNA_library == "Stranded" | Kids_First_Biospecimen_ID %in% new_ids ~ "stranded", 
                 TRUE ~ RNA_library))
 ```
-#### Cohort `r emo::ji("white_check_mark")`
+#### Cohort - plus 5 CBTN and 3 PNOC003 `r emo::ji("white_check_mark")`
 ```{r}
 as.data.frame(table(old_hist$cohort))
 as.data.frame(table(new_hist$cohort))
 ```
-#### Sample and aliquot IDs `r emo::ji("white_check_mark")`
+#### Sample and aliquot IDs - any changes? `r emo::ji("white_check_mark")`
 ```{r}
 old_hist <- old_hist %>%
   arrange(Kids_First_Biospecimen_ID)
@@ -137,49 +169,29 @@ as.data.frame(table(new_hist$seq_center))
 ```
 #### Tumor/Normal Fraction and Ploidy - NA for now
 
-#### Tumor Descriptor `r emo::ji("x")`
-3 new PNOC BS_IDs do not have clinical metadata matched
-```{r}
-as.data.frame(table(old_hist$tumor_descriptor))
-sum(as.data.frame(table(old_hist$tumor_descriptor))$Freq)
-as.data.frame(table(new_hist$tumor_descriptor))
-sum(as.data.frame(table(new_hist$tumor_descriptor))$Freq)
-```
-
-```{r}
-missing_td <- new_hist %>%
-  filter(tumor_descriptor == "Not Reported") %>%
-  pull(Kids_First_Biospecimen_ID) %>%
-  intersect(new_ids)
-
-#Looks like primary site (Pons/Brainstem) and tumor descriptor (Initial CNS Tumor) is missing for these 3 samples - add back
-new_hist <- new_hist %>%
-  mutate(
-    tumor_descriptor = 
-      case_when(Kids_First_Biospecimen_ID %in% missing_td ~ "Initial CNS Tumor", 
-                TRUE ~ tumor_descriptor),
-    primary_site = 
-      case_when(Kids_First_Biospecimen_ID %in% missing_td ~ "Pons/Brainstem",
-                TRUE ~ primary_site))
-```
-
 ## Did new subtypes get captured?
 
 ## How many biospecimen pathology diagnoses were changed? `r emo::ji("white_check_mark")`
 #### 
 ```{r}
-# Not sure why this is happening
-setdiff(new_hist[,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "cohort")], old_hist[,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "cohort")])
-```
-#### Are the `integrated_diagnosis`, `broad_histology`, and `short_histology` NA for these samples? Yes `r emo::ji("white_check_mark")`
-```{r}
-#new_hist[new_hist$Kids_First_Biospecimen_ID %in% path_diff$Kids_First_Biospecimen_ID,c("Kids_First_Biospecimen_ID", "pathology_diagnosis", "integrated_diagnosis", "broad_histology", "short_histology", "cohort")]
-```
+# 170 changes - most are PNOC003 harmonizations
+path_diff <- setdiff(new_hist[,c("Kids_First_Biospecimen_ID", "pathology_diagnosis")], old_hist[,c("Kids_First_Biospecimen_ID", "pathology_diagnosis")]) 
 
-# Remove BS_XM1AHBDJ for mapping rate < 60%
+# what are the CBTCN changes?  Exclude samples with NA previously - those are new RNAs
+path_diff %>%
+  select(Kids_First_Biospecimen_ID) %>%
+  left_join(new_hist) %>%
+  filter(cohort == "CBTN") %>%
+  select(Kids_First_Biospecimen_ID, pathology_diagnosis_new = pathology_diagnosis) %>%
+  left_join(old_hist) %>%
+  filter(!is.na(pathology_diagnosis)) %>%
+  select(Kids_First_Biospecimen_ID, pathology_diagnosis_old = pathology_diagnosis, pathology_diagnosis_new)
+```
+#### Are the `integrated_diagnosis`, `broad_histology`, and `short_histology` NA for all samples? Yes `r emo::ji("white_check_mark")`
 ```{r}
-#new_hist <- new_hist %>%
- # filter(Kids_First_Biospecimen_ID != "BS_XM1AHBDJ")
+new_hist %>%
+  select(integrated_diagnosis, broad_histology, short_histology) %>%
+  distinct()
 ```
 
 # Add back BIXU fields from V17
