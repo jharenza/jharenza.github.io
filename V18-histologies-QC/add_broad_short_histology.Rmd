@@ -1,0 +1,105 @@
+---
+title: "Add broad/short_histology"
+output: html_notebook
+---
+
+## Background
+Base histology needs broad_histology and short_histology column to be used as input in summary generating modules in OpenPBTA.
+
+| Module |  Reason |Brief Description
+|--------|----------|--------
+| [`collapse-rnaseq`](https://github.com/AlexsLemonade/OpenPBTA-analysis/tree/master/analyses/collapse-rnaseq) | adding 8 samples #749 and used in subtyping  | Collapses RSEM FPKM matrices such that gene symbols are de-duplicated. 
+| [`fusion_filtering`](https://github.com/AlexsLemonade/OpenPBTA-analysis/tree/master/analyses/fusion_filtering) | adding 8 samples #749 and used in subtyping  | Standardizes, filters, and prioritizes fusion calls updated in #808 and #830 
+| [`fusion-summary`](https://github.com/AlexsLemonade/OpenPBTA-analysis/tree/master/analyses/fusion-summary)| adding 8 samples #749 and used in subtyping  | Generate summary tables from fusion files updated in  #812 and #816 and #821 and [comment](https://github.com/AlexsLemonade/OpenPBTA-analysis/issues/750#issuecomment-691529675) 
+| [`gene-set-enrichment-analysis`](https://github.com/AlexsLemonade/OpenPBTA-analysis/tree/master/analyses/gene-set-enrichment-analysis) |  adding 8 samples #749 and used in subtyping  | Updated gene set enrichment analysis with appropriate RNA-seq expression data 
+| [`independent-samples`](https://github.com/AlexsLemonade/OpenPBTA-analysis/tree/master/analyses/independent-samples) | adding 8 samples #749 and used in subtyping  | Generates independent specimen lists for WGS/WXS samples updated in  #795 and #797 and [comment](https://github.com/AlexsLemonade/OpenPBTA-analysis/issues/750#issuecomment-691526896)
+| [`transcriptomic-dimension-reduction`](https://github.com/AlexsLemonade/OpenPBTA-analysis/tree/master/analyses/transcriptomic-dimension-reduction)| adding 8 samples #749 used in subtyping | Dimension reduction and visualization of RNA-seq data  | N/A
+
+
+### Input
+Reading pathology_diagnosis and pathology_free_text_diagnosis matches from d3b-center google drive
+
+```{r}
+library(googlesheets4)
+library(tidyverse)
+
+# pathology diagnosis is needed to match tumor samples 
+# to broad/short histology
+path_dx <- read_sheet('https://docs.google.com/spreadsheets/d/1fDXt_YODcSAWDvyI5ISBVhUCu4b5-TFCVWMOwiPeMwk/edit#gid=0',range="pathology_diagnosis_for_subtyping") %>%
+  dplyr::select(pathology_diagnosis,broad_histology, short_histology)
+
+# pathology free text diagnosis is needed to match to 
+# samples marked as "Other" in pathology_diagnosis
+path_free_text <- read_sheet('https://docs.google.com/spreadsheets/d/1fDXt_YODcSAWDvyI5ISBVhUCu4b5-TFCVWMOwiPeMwk/edit#gid=0',range="pathology_free_text_diagnosis_for_subtyping") %>%
+  dplyr::select(pathology_free_text_diagnosis,broad_histology, short_histology)
+
+# QC'ed base_histology
+base_histology = read_tsv("output/pbta-histologies-base.tsv") %>%
+  # Removing integrated_diagnosis,broad_histology, short_histology
+  # because subtyping is being re-run for v18 release
+  dplyr::select(-integrated_diagnosis,-broad_histology, -short_histology)
+
+```
+
+### Dimensions
+```{r}
+dim(base_histology)
+```
+
+### Check if normal is NA in pathology_diagnosis
+```{r}
+base_histology[which(base_histology$sample_type == "Normal" & !is.na(base_histology$pathology_diagnosis)),c("Kids_First_Biospecimen_ID","sample_type","pathology_diagnosis")] 
+```
+50 Normals have path_dx as "Brainstem glioma- Diffuse intrinsic pontine glioma"
+
+### Add NA for path_dx,path_free_text,broad and short_histology in Normals 
+
+```{r}
+
+base_histology <- base_histology  %>%
+  dplyr::mutate("pathology_free_text_diagnosis" = if_else(sample_type == "Normal",NA_character_,pathology_free_text_diagnosis),
+                "pathology_diagnosis" = if_else(sample_type == "Normal",NA_character_,pathology_diagnosis),
+                "broad_histology" = if_else(sample_type == "Normal",NA_character_,broad_histology),
+                "short_histology" = if_else(sample_type == "Normal",NA_character_,short_histology)) %>%
+  unique()
+
+```
+
+
+### Match tumor samples 
+
+#### By path_free_text for "Other" diagnosed samples
+
+Only samples with 'Other' in pathology_diagnosis will be need to be matched by path_free_text
+```{r}
+base_histology_other <- base_histology  %>%
+  dplyr::filter(pathology_diagnosis == "Other") %>%
+  left_join(path_free_text,by="pathology_free_text_diagnosis") 
+```
+
+#### By path_dx for all tumors other than "Other"
+Remove samples with 'Other' in pathology_diagnosis that was already matched above
+```{r}
+base_histology <- base_histology  %>%
+  dplyr::filter(pathology_diagnosis != "Other"|
+                  # add Normals
+                  sample_type=="Normal") %>%
+  left_join(path_dx,by="pathology_diagnosis") %>%
+  bind_rows(base_histology_other) 
+```
+
+
+### Check dimensions for histology with broad/short histology
+```{r}
+dim(unique(base_histology))
+```
+Looks right,2 columns broad_histology and short_histology were added to be used in summary generating modules
+
+### Save file
+
+```{r}
+write.table(base_histology, "output/pbta-histologies-base.tsv", sep = "\t", quote = F, col.names = T, row.names = F)
+
+```
+
+
